@@ -1,5 +1,3 @@
-import json
-
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -44,39 +42,37 @@ Format using markdown with clear section headers."""
 
 
 def _call_bedrock(prompt: str) -> str:
-    """Call AWS Bedrock Claude and return the text response."""
+    """Call AWS Bedrock using the Converse API — works with any model (Gemma, Claude, etc)."""
     try:
-        client = boto3.client(
+        bedrock = boto3.client(
             "bedrock-runtime",
             region_name=settings.AWS_REGION,
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID or None,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY or None,
         )
 
-        body = {
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 1500,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt,
-                }
-            ],
-            "system": (
-                "You are an expert recruitment coach who prepares candidates for specific "
-                "client interviews. Be direct, specific, and practical."
-            ),
-        }
-
-        response = client.invoke_model(
-            modelId=settings.BEDROCK_MODEL_ID,
-            body=json.dumps(body),
-            contentType="application/json",
-            accept="application/json",
+        system_instruction = (
+            "You are an expert recruitment coach who prepares candidates for specific "
+            "client interviews. Be direct, specific, and practical.\n\n"
         )
 
-        result = json.loads(response["body"].read())
-        return result["content"][0]["text"]
+        response = bedrock.converse(
+            modelId=settings.BEDROCK_MODEL_ID,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"text": system_instruction + prompt}
+                    ],
+                }
+            ],
+            inferenceConfig={
+                "maxTokens": 1500,
+                "temperature": 0.7,
+            },
+        )
+
+        return response["output"]["message"]["content"][0]["text"]
 
     except (BotoCoreError, ClientError) as e:
         raise HTTPException(

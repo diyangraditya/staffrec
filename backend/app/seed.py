@@ -144,17 +144,7 @@ Be punchy and conversational. Drop the formal marketer voice. Lead with the outc
     db.add(sari_brief)
     db.flush()
 
-    # ── Past Feedback Records ─────────────────────────────────────────────────
-
-    # Vertex Consulting — 3 past failed candidates (used as AI context)
-    vertex_feedbacks = [
-        Feedback(
-            assignment_id=aditya_assignment.id,  # placeholder — using aditya's for demo
-            result="fail",
-            feedback_notes="Candidate gave long-winded answers. Lost the interviewer after 2 minutes.",
-            client_remarks="Too much structure, not enough clarity. We want the answer, not the framework.",
-        ),
-    ]
+    # ── Past Feedback Records (historical — used as AI context) ─────────────────
 
     # Create dummy assignments for historical feedback context
     # (these represent past candidates not in our current seed set)
@@ -169,12 +159,12 @@ Be punchy and conversational. Drop the formal marketer voice. Lead with the outc
         status="interviewed",
     )
     historical_buildfast_1 = Assignment(
-        candidate_id=aditya.id,
+        candidate_id=marcus.id,
         client_id=buildfast.id,
         status="interviewed",
     )
     historical_buildfast_2 = Assignment(
-        candidate_id=marcus.id,
+        candidate_id=sari.id,
         client_id=buildfast.id,
         status="interviewed",
     )
@@ -221,4 +211,4 @@ Be punchy and conversational. Drop the formal marketer voice. Lead with the outc
     db.add_all(feedbacks)
     db.commit()
 
-    print("✅ Seed data loaded successfully.")
+    print("Seed data loaded successfully.")
