@@ -143,3 +143,21 @@ def get_brief(assignment_id: int, db: Session = Depends(get_db)):
             detail=f"No brief found for assignment id {assignment_id}. Generate one first via POST /briefs/generate.",
         )
     return brief
+
+
+@router.delete("/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_brief(assignment_id: int, db: Session = Depends(get_db)):
+    """Delete a brief so it can be regenerated. Resets assignment status to 'pending'."""
+    brief = db.query(Brief).filter(Brief.assignment_id == assignment_id).first()
+    if not brief:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No brief found for assignment id {assignment_id}.",
+        )
+    # Reset assignment status so it can be regenerated
+    from app.models import Assignment as AssignmentModel
+    assignment = db.query(AssignmentModel).filter(AssignmentModel.id == assignment_id).first()
+    if assignment:
+        assignment.status = "pending"
+    db.delete(brief)
+    db.commit()

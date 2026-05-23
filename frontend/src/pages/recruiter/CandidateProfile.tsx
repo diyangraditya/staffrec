@@ -4,10 +4,12 @@ import Sidebar from '../../components/Sidebar'
 import StatusBadge from '../../components/cards/StatusBadge'
 import LoadingSpinner from '../../components/ui/LoadingSpinner'
 import Button from '../../components/ui/Button'
+import Input from '../../components/ui/Input'
 import MarkdownContent from '../../components/ui/MarkdownContent'
-import { getCandidate } from '../../services/candidateService'
+import ConfirmDeleteModal from '../../components/modals/ConfirmDeleteModal'
+import { getCandidate, updateCandidate, deleteCandidate } from '../../services/candidateService'
 import { getClients } from '../../services/clientService'
-import { generateBrief, getBrief } from '../../services/briefService'
+import { generateBrief, getBrief, deleteBrief } from '../../services/briefService'
 import { createAssignment } from '../../services/assignmentService'
 import { useToast } from '../../components/ui/Toast'
 import type { CandidateDetail, Client, Brief } from '../../types'
@@ -25,8 +27,23 @@ export default function CandidateProfile() {
   const [loading, setLoading] = useState(true)
   const [generatingBrief, setGeneratingBrief] = useState(false)
   const [assigning, setAssigning] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
   const [selectedClientId, setSelectedClientId] = useState<number | ''>('')
+  const [interviewDate, setInterviewDate] = useState('')
   const [error, setError] = useState('')
+  const [isEditing, setIsEditing] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  // Edit form state
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    background: '',
+    internal_score: 0,
+    internal_notes: '',
+  })
 
   const fetchData = async () => {
     if (!id) return
@@ -37,17 +54,22 @@ export default function CandidateProfile() {
       ])
       setCandidate(cand)
       setClients(allClients)
+      setEditForm({
+        name: cand.name,
+        email: cand.email,
+        background: cand.background,
+        internal_score: cand.internal_score,
+        internal_notes: cand.internal_notes,
+      })
 
       if (cand.assignment) {
         const client = allClients.find((c) => c.id === cand.assignment!.client_id)
         setAssignedClient(client ?? null)
-
-        // Try to fetch existing brief
         try {
           const b = await getBrief(cand.assignment.id)
           setBrief(b)
         } catch {
-          // No brief yet — that's fine
+          // No brief yet
         }
       }
     } catch {
@@ -66,6 +88,7 @@ export default function CandidateProfile() {
       await createAssignment({
         candidate_id: candidate.id,
         client_id: Number(selectedClientId),
+        interview_date: interviewDate || undefined,
       })
       showToast('Candidate assigned successfully!')
       setLoading(true)
@@ -84,7 +107,6 @@ export default function CandidateProfile() {
       const b = await generateBrief(candidate.assignment.id)
       setBrief(b)
       showToast('AI brief generated successfully! ✨')
-      // Refresh candidate to update status
       const updated = await getCandidate(Number(id))
       setCandidate(updated)
     } catch {
@@ -94,14 +116,62 @@ export default function CandidateProfile() {
     }
   }
 
-  if (loading) return (
-    <div className="flex min-h-screen bg-slate-50">
-      <Sidebar />
-      <main className="ml-60 flex-1 flex items-center justify-center">
-        <LoadingSpinner message="Loading candidate profile..." />
-      </main>
-    </div>
-  )
+  const handleRegenerateBrief = async () => {
+    if (!candidate?.assignment || !brief) return
+    setGeneratingBrief(true)
+    try {
+      await deleteBrief(candidate.assignment.id)
+      setBrief(null)
+      const b = await generateBrief(candidate.assignment.id)
+      setBrief(b)
+      showToast('Brief regenerated successfully! ✨')
+      const updated = await getCandidate(Number(id))
+      setCandidate(updated)
+    } catch {
+      showToast('Failed to regenerate brief.', 'error')
+    } finally {
+      setGeneratingBrief(false)
+    }
+  }
+
+  const handleSaveEdit = async () => {
+    if (!candidate) return
+    setSaving(true)
+    try {
+      await updateCandidate(candidate.id, editForm)
+      showToast('Candidate updated!')
+      setIsEditing(false)
+      await fetchData()
+    } catch {
+      showToast('Failed to update candidate.', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!candidate) return
+    setDeleting(true)
+    try {
+      await deleteCandidate(candidate.id)
+      showToast(`${candidate.name} deleted.`)
+      navigate('/recruiter/dashboard')
+    } catch {
+      showToast('Failed to delete candidate.', 'error')
+      setDeleting(false)
+      setShowDeleteConfirm(false)
+    }
+  }
+
+  if (loading)
+    return (
+      <div className="flex min-h-screen bg-slate-50">
+        <Sidebar />
+        <main className="ml-60 flex-1 flex items-center justify-center">
+          <LoadingSpinner message="Loading candidate profile..." />
+        </main>
+      </div>
+    )
 
   if (!candidate) return null
 
@@ -110,6 +180,17 @@ export default function CandidateProfile() {
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
+
+      {showDeleteConfirm && (
+        <ConfirmDeleteModal
+          title={`Delete ${candidate.name}?`}
+          message="This will permanently delete the candidate, their assignment, brief, and all feedback. This cannot be undone."
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+          loading={deleting}
+        />
+      )}
+
       <main className="ml-60 flex-1 p-8">
         <div className="max-w-3xl mx-auto">
           {/* Back */}
@@ -131,26 +212,89 @@ export default function CandidateProfile() {
 
           {/* Header card */}
           <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <h1 className="text-xl font-bold text-slate-900">{candidate.name}</h1>
-                <p className="text-slate-500 text-sm mt-0.5">{candidate.email}</p>
-                <p className="text-slate-600 text-sm mt-2 max-w-lg">{candidate.background}</p>
-              </div>
-              <div className="flex flex-col items-center bg-indigo-50 rounded-xl px-4 py-3">
-                <span className="text-2xl font-bold text-indigo-700">
-                  {candidate.internal_score.toFixed(1)}
-                </span>
-                <span className="text-xs text-indigo-500">/10</span>
-              </div>
-            </div>
-
-            {candidate.internal_notes && (
-              <div className="mt-4 pt-4 border-t border-slate-100">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">
-                  Recruiter Notes
-                </p>
-                <p className="text-sm text-slate-600">{candidate.internal_notes}</p>
+            {!isEditing ? (
+              <>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h1 className="text-xl font-bold text-slate-900">{candidate.name}</h1>
+                    <p className="text-slate-500 text-sm mt-0.5">{candidate.email}</p>
+                    <p className="text-slate-600 text-sm mt-2 max-w-lg">{candidate.background}</p>
+                  </div>
+                  <div className="flex flex-col items-center bg-indigo-50 rounded-xl px-4 py-3 shrink-0">
+                    <span className="text-2xl font-bold text-indigo-700">
+                      {candidate.internal_score.toFixed(1)}
+                    </span>
+                    <span className="text-xs text-indigo-500">/10</span>
+                  </div>
+                </div>
+                {candidate.internal_notes && (
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">
+                      Recruiter Notes
+                    </p>
+                    <p className="text-sm text-slate-600">{candidate.internal_notes}</p>
+                  </div>
+                )}
+                <div className="mt-4 flex gap-2">
+                  <Button variant="secondary" className="text-xs" onClick={() => setIsEditing(true)}>
+                    ✏️ Edit
+                  </Button>
+                  <Button variant="danger" className="text-xs" onClick={() => setShowDeleteConfirm(true)}>
+                    🗑 Delete
+                  </Button>
+                </div>
+              </>
+            ) : (
+              // Edit form
+              <div className="space-y-4">
+                <h2 className="font-semibold text-slate-800">Edit Candidate</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    label="Name"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                  />
+                  <Input
+                    label="Email"
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Background</label>
+                  <textarea
+                    value={editForm.background}
+                    onChange={(e) => setEditForm((f) => ({ ...f, background: e.target.value }))}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-2">
+                    Score: <span className="text-indigo-600 font-bold">{editForm.internal_score.toFixed(1)}</span>/10
+                  </label>
+                  <input
+                    type="range"
+                    min="1" max="10" step="0.1"
+                    value={editForm.internal_score}
+                    onChange={(e) => setEditForm((f) => ({ ...f, internal_score: parseFloat(e.target.value) }))}
+                    className="w-full accent-indigo-600"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Recruiter Notes</label>
+                  <textarea
+                    value={editForm.internal_notes}
+                    onChange={(e) => setEditForm((f) => ({ ...f, internal_notes: e.target.value }))}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="primary" onClick={handleSaveEdit} loading={saving}>Save Changes</Button>
+                  <Button variant="secondary" onClick={() => setIsEditing(false)}>Cancel</Button>
+                </div>
               </div>
             )}
           </div>
@@ -170,51 +314,45 @@ export default function CandidateProfile() {
                     <p className="text-xs text-slate-400 mt-1">
                       Interview:{' '}
                       {new Date(assignment.interview_date).toLocaleDateString('en-US', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
+                        day: 'numeric', month: 'short', year: 'numeric',
                       })}
                     </p>
                   )}
                 </div>
                 <div className="flex items-center gap-3">
                   <StatusBadge status={assignment.status} />
-                  {assignment.status === 'briefed' && (
+                  {(assignment.status === 'briefed' || assignment.status === 'interviewed') && (
                     <Button
                       variant="secondary"
                       onClick={() => navigate(`/recruiter/feedback/${assignment.id}`)}
                     >
-                      Submit Feedback
-                    </Button>
-                  )}
-                  {assignment.status === 'interviewed' && (
-                    <Button
-                      variant="secondary"
-                      onClick={() => navigate(`/recruiter/feedback/${assignment.id}`)}
-                    >
-                      View Feedback
+                      {assignment.status === 'briefed' ? 'Submit Feedback' : 'View Feedback'}
                     </Button>
                   )}
                 </div>
               </div>
             ) : (
-              <div className="flex items-end gap-3">
-                <div className="flex-1">
-                  <label className="text-sm font-medium text-slate-700 block mb-1">
-                    Assign to client
-                  </label>
-                  <select
-                    value={selectedClientId}
-                    onChange={(e) => setSelectedClientId(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="">Select a client...</option>
-                    {clients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.company}
-                      </option>
-                    ))}
-                  </select>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 block mb-1">Assign to client</label>
+                    <select
+                      value={selectedClientId}
+                      onChange={(e) => setSelectedClientId(Number(e.target.value))}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="">Select a client...</option>
+                      {clients.map((c) => (
+                        <option key={c.id} value={c.id}>{c.company}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <Input
+                    label="Interview Date (optional)"
+                    type="date"
+                    value={interviewDate}
+                    onChange={(e) => setInterviewDate(e.target.value)}
+                  />
                 </div>
                 <Button
                   variant="primary"
@@ -246,26 +384,34 @@ export default function CandidateProfile() {
             )}
 
             {generatingBrief && (
-              <LoadingSpinner
-                size="md"
-                message="AI is generating your brief… this takes 3–8 seconds"
-              />
+              <LoadingSpinner size="md" message="AI is generating your brief… this takes 3–8 seconds" />
             )}
 
             {brief && !generatingBrief && (
               <div>
                 <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-4 mb-4 max-h-64 overflow-y-auto">
-                  <MarkdownContent content={brief.content.slice(0, 600) + (brief.content.length > 600 ? '…' : '')} />
+                  <MarkdownContent
+                    content={brief.content.slice(0, 600) + (brief.content.length > 600 ? '…' : '')}
+                  />
                 </div>
                 <p className="text-xs text-slate-400 mb-3">
                   Generated {new Date(brief.generated_at).toLocaleString()}
                 </p>
-                <Button
-                  variant="secondary"
-                  onClick={() => navigate(`/recruiter/feedback/${assignment!.id}`)}
-                >
-                  Submit Post-Interview Feedback →
-                </Button>
+                <div className="flex gap-3">
+                  <Button
+                    variant="secondary"
+                    onClick={() => navigate(`/recruiter/feedback/${assignment!.id}`)}
+                  >
+                    Submit Post-Interview Feedback →
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="text-xs"
+                    onClick={handleRegenerateBrief}
+                  >
+                    🔄 Regenerate Brief
+                  </Button>
+                </div>
               </div>
             )}
           </div>

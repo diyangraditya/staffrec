@@ -17,3 +17,15 @@ export const createClient = async (
   const res = await api.post('/clients', data)
   return res.data
 }
+
+export const updateClient = async (
+  id: number,
+  data: Partial<Omit<Client, 'id' | 'created_at'>>
+): Promise<Client> => {
+  const res = await api.put(`/clients/${id}`, data)
+  return res.data
+}
+
+export const deleteClient = async (id: number): Promise<void> => {
+  await api.delete(`/clients/${id}`)
+}

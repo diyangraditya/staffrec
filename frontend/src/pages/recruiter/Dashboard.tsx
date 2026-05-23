@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Sidebar from '../../components/Sidebar'
 import CandidateCard from '../../components/cards/CandidateCard'
 import ClientCard from '../../components/cards/ClientCard'
 import LoadingSpinner from '../../components/ui/LoadingSpinner'
+import Button from '../../components/ui/Button'
+import AddCandidateModal from '../../components/modals/AddCandidateModal'
+import AddClientModal from '../../components/modals/AddClientModal'
 import { getCandidates } from '../../services/candidateService'
 import { getClients } from '../../services/clientService'
 import type { CandidateDetail, Client } from '../../types'
@@ -12,8 +15,11 @@ export default function Dashboard() {
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showAddCandidate, setShowAddCandidate] = useState(false)
+  const [showAddClient, setShowAddClient] = useState(false)
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
+    setLoading(true)
     Promise.all([getCandidates(), getClients()])
       .then(([c, cl]) => {
         setCandidates(c)
@@ -23,15 +29,15 @@ export default function Dashboard() {
       .finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => { loadData() }, [loadData])
+
   const clientMap = new Map(clients.map((c) => [c.id, c]))
 
   // Stats
   const total = candidates.length
   const pending = candidates.filter((c) => c.assignment?.status === 'pending').length
   const briefed = candidates.filter((c) => c.assignment?.status === 'briefed').length
-  const interviewed = candidates.filter(
-    (c) => c.assignment?.status === 'interviewed'
-  ).length
+  const interviewed = candidates.filter((c) => c.assignment?.status === 'interviewed').length
 
   const stats = [
     { label: 'Total Candidates', value: total, color: 'text-slate-700' },
@@ -44,13 +50,29 @@ export default function Dashboard() {
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
 
+      {/* Modals */}
+      {showAddCandidate && (
+        <AddCandidateModal
+          onClose={() => setShowAddCandidate(false)}
+          onSuccess={() => { setShowAddCandidate(false); loadData() }}
+        />
+      )}
+      {showAddClient && (
+        <AddClientModal
+          onClose={() => setShowAddClient(false)}
+          onSuccess={() => { setShowAddClient(false); loadData() }}
+        />
+      )}
+
       {/* Main */}
       <main className="ml-60 flex-1 p-8">
         <div className="max-w-5xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-            <p className="text-slate-500 mt-1">Manage your candidate pipeline</p>
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+              <p className="text-slate-500 mt-1">Manage your candidate pipeline</p>
+            </div>
           </div>
 
           {loading && <LoadingSpinner message="Loading dashboard..." />}
@@ -77,14 +99,30 @@ export default function Dashboard() {
 
               {/* Two-column layout */}
               <div className="grid grid-cols-3 gap-6">
-                {/* Candidate Pipeline */}
+                {/* Candidate List */}
                 <div className="col-span-2">
-                  <h2 className="text-base font-semibold text-slate-700 mb-3">
-                    Candidate List
-                  </h2>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-base font-semibold text-slate-700">Candidate List</h2>
+                    <Button
+                      variant="primary"
+                      className="text-xs px-3 py-1.5"
+                      onClick={() => setShowAddCandidate(true)}
+                    >
+                      + Add Candidate
+                    </Button>
+                  </div>
                   <div className="space-y-3">
                     {candidates.length === 0 ? (
-                      <p className="text-sm text-slate-400">No candidates yet.</p>
+                      <div className="bg-white border border-dashed border-slate-200 rounded-xl p-8 text-center">
+                        <p className="text-slate-400 text-sm">No candidates yet.</p>
+                        <Button
+                          variant="secondary"
+                          className="mt-3 text-xs"
+                          onClick={() => setShowAddCandidate(true)}
+                        >
+                          Add your first candidate
+                        </Button>
+                      </div>
                     ) : (
                       candidates.map((c) => (
                         <CandidateCard key={c.id} candidate={c} clientMap={clientMap} />
@@ -95,13 +133,33 @@ export default function Dashboard() {
 
                 {/* Clients */}
                 <div>
-                  <h2 className="text-base font-semibold text-slate-700 mb-3">
-                    Client Companies
-                  </h2>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-base font-semibold text-slate-700">Client Companies</h2>
+                    <Button
+                      variant="secondary"
+                      className="text-xs px-3 py-1.5"
+                      onClick={() => setShowAddClient(true)}
+                    >
+                      + Add
+                    </Button>
+                  </div>
                   <div className="space-y-3">
-                    {clients.map((c) => (
-                      <ClientCard key={c.id} client={c} />
-                    ))}
+                    {clients.length === 0 ? (
+                      <div className="bg-white border border-dashed border-slate-200 rounded-xl p-6 text-center">
+                        <p className="text-slate-400 text-sm mb-2">No clients yet.</p>
+                        <Button
+                          variant="secondary"
+                          className="text-xs"
+                          onClick={() => setShowAddClient(true)}
+                        >
+                          Add first client
+                        </Button>
+                      </div>
+                    ) : (
+                      clients.map((c) => (
+                        <ClientCard key={c.id} client={c} />
+                      ))
+                    )}
                   </div>
                 </div>
               </div>

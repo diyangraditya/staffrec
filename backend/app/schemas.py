@@ -13,6 +13,13 @@ class ClientCreate(BaseModel):
     expectations: list[str]
 
 
+class ClientUpdate(BaseModel):
+    name: str | None = None
+    company: str | None = None
+    interview_style: str | None = None
+    expectations: list[str] | None = None
+
+
 class ClientOut(BaseModel):
     id: int
     name: str
@@ -39,6 +46,14 @@ class CandidateCreate(BaseModel):
     internal_notes: str = ""
 
 
+class CandidateUpdate(BaseModel):
+    name: str | None = None
+    email: EmailStr | None = None
+    background: str | None = None
+    internal_score: float | None = None
+    internal_notes: str | None = None
+
+
 class CandidateOut(BaseModel):
     id: int
     name: str
@@ -54,6 +69,7 @@ class CandidateOut(BaseModel):
 class CandidateDetail(CandidateOut):
     """Candidate detail with current assignment if any."""
     assignment: "AssignmentOut | None" = None
+
 
 
 # ─── Assignment ───────────────────────────────────────────────────────────────

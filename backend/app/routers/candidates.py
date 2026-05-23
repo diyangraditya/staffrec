@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Assignment, Candidate
-from app.schemas import AssignmentOut, CandidateCreate, CandidateDetail, CandidateOut
+from app.models import Assignment, Brief, Candidate, Feedback
+from app.schemas import AssignmentOut, CandidateCreate, CandidateDetail, CandidateOut, CandidateUpdate
 
 router = APIRouter(prefix="/candidates", tags=["Candidates"])
 
@@ -48,3 +48,36 @@ def get_candidate(candidate_id: int, db: Session = Depends(get_db)):
     result = CandidateDetail.model_validate(candidate)
     result.assignment = AssignmentOut.model_validate(assignment) if assignment else None
     return result
+
+
+@router.put("/{candidate_id}", response_model=CandidateOut)
+def update_candidate(
+    candidate_id: int, payload: CandidateUpdate, db: Session = Depends(get_db)
+):
+    candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found.")
+
+    # Only update fields that were actually provided
+    for field, value in payload.model_dump(exclude_none=True).items():
+        setattr(candidate, field, value)
+
+    db.commit()
+    db.refresh(candidate)
+    return candidate
+
+
+@router.delete("/{candidate_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_candidate(candidate_id: int, db: Session = Depends(get_db)):
+    candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found.")
+
+    # Cascade: delete feedback → briefs → assignments → candidate
+    assignments = db.query(Assignment).filter(Assignment.candidate_id == candidate_id).all()
+    for a in assignments:
+        db.query(Feedback).filter(Feedback.assignment_id == a.id).delete()
+        db.query(Brief).filter(Brief.assignment_id == a.id).delete()
+    db.query(Assignment).filter(Assignment.candidate_id == candidate_id).delete()
+    db.delete(candidate)
+    db.commit()
