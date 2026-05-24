@@ -30,7 +30,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_ENDPOINT, "http://localhost:5173"],
+    allow_origins=[
+        settings.FRONTEND_ENDPOINT,
+        settings.CLOUDFRONT_URL,
+        "http://localhost:5173",
+        "http://localhost:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,3 +54,6 @@ app.include_router(analytics.router)
 @app.get("/", tags=["Health"])
 def health_check():
     return {"status": "ok", "message": "Staffrec backend is running"}
+
+from mangum import Mangum
+lambda_handler = Mangum(app)

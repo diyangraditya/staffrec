@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     BEDROCK_MODEL_ID: str = "google.gemma-3-27b-it"
     SENDER_EMAIL: str = "recruiter@staffrec.io"
     FRONTEND_ENDPOINT: str = "http://localhost:5173"
+    CLOUDFRONT_URL: str = ""
 
     class Config:
         env_file = ".env"
