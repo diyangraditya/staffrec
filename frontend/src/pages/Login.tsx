@@ -4,10 +4,9 @@ import { useAuth } from '../context/AuthContext'
 import { getCandidates } from '../services/candidateService'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
+import api from '../services/api'
 
 type Role = 'recruiter' | 'candidate'
-
-const RECRUITER_PASSWORD = 'staffrec2024'
 
 export default function Login() {
   const { login } = useAuth()
@@ -19,6 +18,13 @@ export default function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Auto-switch default email when role changes
+  const handleRoleChange = (newRole: Role) => {
+    setRole(newRole)
+    setError('')
+    setEmail('')
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -26,12 +32,26 @@ export default function Login() {
 
     try {
       if (role === 'recruiter') {
-        if (password !== RECRUITER_PASSWORD) {
-          setError('Incorrect password. Hint: staffrec2024')
-          return
-        }
-        const name = email.split('@')[0] || 'Recruiter'
-        login({ role: 'recruiter', name, id: 0, email })
+        const formData = new URLSearchParams()
+        formData.append('username', email)
+        formData.append('password', password)
+
+        const res = await api.post('/auth/login', formData, {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        })
+        const token = res.data.access_token
+
+        // Now we need to set the token for subsequent requests
+        localStorage.setItem('token', token)
+        
+        // Fetch user data
+        const userRes = await api.get('/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        
+        login(token, userRes.data)
         navigate('/recruiter/dashboard')
       } else {
         // Candidate: look up by email
@@ -45,11 +65,11 @@ export default function Login() {
           )
           return
         }
-        login({ role: 'candidate', name: found.name, id: found.id, email: found.email })
+        login('mock_candidate_token', { role: 'candidate', name: found.name, id: found.id, email: found.email })
         navigate('/candidate/brief')
       }
     } catch {
-      setError('Something went wrong. Make sure the backend is running.')
+      setError('Something went wrong. Please check your credentials.')
     } finally {
       setLoading(false)
     }
@@ -77,7 +97,7 @@ export default function Login() {
               <button
                 key={r}
                 type="button"
-                onClick={() => { setRole(r); setError('') }}
+                onClick={() => handleRoleChange(r)}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-sm font-medium cursor-pointer ${
                   role === r
                     ? 'border-indigo-500 bg-indigo-50 text-indigo-700'

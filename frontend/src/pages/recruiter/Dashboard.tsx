@@ -18,6 +18,8 @@ export default function Dashboard() {
   const [showAddCandidate, setShowAddCandidate] = useState(false)
   const [showAddClient, setShowAddClient] = useState(false)
 
+  const [searchQuery, setSearchQuery] = useState('')
+
   const loadData = useCallback(() => {
     setLoading(true)
     Promise.all([getCandidates(), getClients()])
@@ -32,6 +34,16 @@ export default function Dashboard() {
   useEffect(() => { loadData() }, [loadData])
 
   const clientMap = new Map(clients.map((c) => [c.id, c]))
+
+  // Filter candidates based on search query
+  const filteredCandidates = candidates.filter((c) => {
+    const query = searchQuery.toLowerCase()
+    return (
+      c.name.toLowerCase().includes(query) ||
+      c.email.toLowerCase().includes(query) ||
+      c.background.toLowerCase().includes(query)
+    )
+  })
 
   // Stats
   const total = candidates.length
@@ -103,28 +115,46 @@ export default function Dashboard() {
                 <div className="col-span-2">
                   <div className="flex items-center justify-between mb-3">
                     <h2 className="text-base font-semibold text-slate-700">Candidate List</h2>
-                    <Button
-                      variant="primary"
-                      className="text-xs px-3 py-1.5"
-                      onClick={() => setShowAddCandidate(true)}
-                    >
-                      + Add Candidate
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Search candidates..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <svg className="w-4 h-4 text-slate-400 absolute left-2.5 top-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      </div>
+                      <Button
+                        variant="primary"
+                        className="text-xs px-3 py-1.5"
+                        onClick={() => setShowAddCandidate(true)}
+                      >
+                        + Add Candidate
+                      </Button>
+                    </div>
                   </div>
                   <div className="space-y-3">
-                    {candidates.length === 0 ? (
+                    {filteredCandidates.length === 0 ? (
                       <div className="bg-white border border-dashed border-slate-200 rounded-xl p-8 text-center">
-                        <p className="text-slate-400 text-sm">No candidates yet.</p>
-                        <Button
-                          variant="secondary"
-                          className="mt-3 text-xs"
-                          onClick={() => setShowAddCandidate(true)}
-                        >
-                          Add your first candidate
-                        </Button>
+                        <p className="text-slate-400 text-sm">
+                          {candidates.length === 0 ? 'No candidates yet.' : 'No candidates match your search.'}
+                        </p>
+                        {candidates.length === 0 && (
+                          <Button
+                            variant="secondary"
+                            className="mt-3 text-xs"
+                            onClick={() => setShowAddCandidate(true)}
+                          >
+                            Add your first candidate
+                          </Button>
+                        )}
                       </div>
                     ) : (
-                      candidates.map((c) => (
+                      filteredCandidates.map((c) => (
                         <CandidateCard key={c.id} candidate={c} clientMap={clientMap} />
                       ))
                     )}

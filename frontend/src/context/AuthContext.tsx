@@ -1,9 +1,11 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import type { User } from '../types'
+import api from '../services/api'
 
 interface AuthContextType {
   user: User | null
-  login: (user: User) => void
+  loading: boolean
+  login: (token: string, user: User) => void
   logout: () => void
 }
 
@@ -11,30 +13,39 @@ const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const stored = localStorage.getItem('staffrec_user')
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored))
-      } catch {
-        localStorage.removeItem('staffrec_user')
-      }
+    const token = localStorage.getItem('token')
+    if (token) {
+      api.get('/auth/me')
+        .then((res) => {
+          setUser(res.data)
+        })
+        .catch(() => {
+          localStorage.removeItem('token')
+          setUser(null)
+        })
+        .finally(() => {
+          setLoading(false)
+        })
+    } else {
+      setLoading(false)
     }
   }, [])
 
-  const login = (userData: User) => {
+  const login = (token: string, userData: User) => {
+    localStorage.setItem('token', token)
     setUser(userData)
-    localStorage.setItem('staffrec_user', JSON.stringify(userData))
   }
 
   const logout = () => {
+    localStorage.removeItem('token')
     setUser(null)
-    localStorage.removeItem('staffrec_user')
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

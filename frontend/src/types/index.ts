@@ -57,7 +57,7 @@ export interface Brief {
 
 export interface User {
   role: 'recruiter' | 'candidate'
-  name: string
+  name?: string
   id: number
-  email?: string
+  email: string
 }

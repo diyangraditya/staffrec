@@ -8,10 +8,22 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.models import Assignment, Brief, Candidate, Client, Feedback
+from app.models import Assignment, Brief, Candidate, Client, Feedback, User
+from app.auth import get_password_hash
 
 
 def seed_database(db: Session) -> None:
+    # Seed User if not exists
+    if db.query(User).count() == 0:
+        print("🌱 Seeding default recruiter user...")
+        default_user = User(
+            email="recruiter@staffrec.io",
+            hashed_password=get_password_hash("staffrec2024"),
+            role="recruiter"
+        )
+        db.add(default_user)
+        db.commit()
+
     # Only seed if no clients exist
     if db.query(Client).count() > 0:
         return

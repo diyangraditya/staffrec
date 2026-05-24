@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.database import Base, SessionLocal, engine
-from app.routers import assignments, briefs, candidates, clients, feedback
+from app.routers import assignments, briefs, candidates, clients, feedback, auth
 from app.seed import seed_database
 
 
@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Staffrec API",
-    description="AI-powered recruitment briefing platform — backend API",
+    description="AI-powered recruitment briefing platform - backend API",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -36,6 +36,7 @@ app.add_middleware(
 )
 
 # ── Routers ───────────────────────────────────────────────────────────────────
+app.include_router(auth.router)
 app.include_router(clients.router)
 app.include_router(candidates.router)
 app.include_router(assignments.router)

@@ -41,10 +41,10 @@ export default function Sidebar() {
         <div className="px-4 py-3 border-b border-slate-700/50">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white text-sm font-bold">
-              {user.name.charAt(0).toUpperCase()}
+              {(user.name || user.email || '?').charAt(0).toUpperCase()}
             </div>
             <div className="overflow-hidden">
-              <p className="text-slate-100 text-sm font-medium truncate">{user.name}</p>
+              <p className="text-slate-100 text-sm font-medium truncate">{user.name || user.email}</p>
               <p className="text-slate-400 text-xs capitalize">{user.role}</p>
             </div>
           </div>

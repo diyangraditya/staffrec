@@ -8,9 +8,22 @@ from app.schemas import AssignmentOut, CandidateCreate, CandidateDetail, Candida
 router = APIRouter(prefix="/candidates", tags=["Candidates"])
 
 
-@router.get("", response_model=list[CandidateOut])
+@router.get("", response_model=list[CandidateDetail])
 def list_candidates(db: Session = Depends(get_db)):
-    return db.query(Candidate).order_by(Candidate.created_at.desc()).all()
+    candidates = db.query(Candidate).order_by(Candidate.created_at.desc()).all()
+    result = []
+    for cand in candidates:
+        # Attach the most recent assignment for each candidate
+        assignment = (
+            db.query(Assignment)
+            .filter(Assignment.candidate_id == cand.id)
+            .order_by(Assignment.created_at.desc())
+            .first()
+        )
+        detail = CandidateDetail.model_validate(cand)
+        detail.assignment = AssignmentOut.model_validate(assignment) if assignment else None
+        result.append(detail)
+    return result
 
 
 @router.post("", response_model=CandidateOut, status_code=status.HTTP_201_CREATED)

@@ -7,10 +7,11 @@ import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import MarkdownContent from '../../components/ui/MarkdownContent'
 import ConfirmDeleteModal from '../../components/modals/ConfirmDeleteModal'
+import PreviewBriefModal from '../../components/modals/PreviewBriefModal'
 import { getCandidate, updateCandidate, deleteCandidate } from '../../services/candidateService'
 import { getClients } from '../../services/clientService'
 import { generateBrief, getBrief, deleteBrief } from '../../services/briefService'
-import { createAssignment } from '../../services/assignmentService'
+import { createAssignment, updateAssignmentStatus } from '../../services/assignmentService'
 import { useToast } from '../../components/ui/Toast'
 import type { CandidateDetail, Client, Brief } from '../../types'
 
@@ -29,12 +30,14 @@ export default function CandidateProfile() {
   const [assigning, setAssigning] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [updatingStatus, setUpdatingStatus] = useState(false)
 
   const [selectedClientId, setSelectedClientId] = useState<number | ''>('')
   const [interviewDate, setInterviewDate] = useState('')
   const [error, setError] = useState('')
   const [isEditing, setIsEditing] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
 
   // Edit form state
   const [editForm, setEditForm] = useState({
@@ -88,7 +91,7 @@ export default function CandidateProfile() {
       await createAssignment({
         candidate_id: candidate.id,
         client_id: Number(selectedClientId),
-        interview_date: interviewDate || undefined,
+        interview_date: interviewDate || null,
       })
       showToast('Candidate assigned successfully!')
       setLoading(true)
@@ -97,6 +100,20 @@ export default function CandidateProfile() {
       showToast('Failed to assign candidate.', 'error')
     } finally {
       setAssigning(false)
+    }
+  }
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!candidate?.assignment) return
+    setUpdatingStatus(true)
+    try {
+      await updateAssignmentStatus(candidate.assignment.id, newStatus)
+      showToast('Assignment status updated!')
+      await fetchData() // Refresh data to get the updated status
+    } catch {
+      showToast('Failed to update status.', 'error')
+    } finally {
+      setUpdatingStatus(false)
     }
   }
 
@@ -188,6 +205,15 @@ export default function CandidateProfile() {
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteConfirm(false)}
           loading={deleting}
+        />
+      )}
+
+      {showPreview && assignedClient && brief && (
+        <PreviewBriefModal
+          onClose={() => setShowPreview(false)}
+          candidate={candidate}
+          client={assignedClient}
+          brief={brief}
         />
       )}
 
@@ -319,11 +345,25 @@ export default function CandidateProfile() {
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-3">
-                  <StatusBadge status={assignment.status} />
+                <div className="flex flex-col items-end gap-2">
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={assignment.status} />
+                    <select
+                      value={assignment.status}
+                      onChange={(e) => handleStatusChange(e.target.value)}
+                      disabled={updatingStatus}
+                      className="text-xs border border-slate-200 rounded px-2 py-1 bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="briefed">Briefed</option>
+                      <option value="interviewed">Interviewed</option>
+                    </select>
+                  </div>
+                  
                   {(assignment.status === 'briefed' || assignment.status === 'interviewed') && (
                     <Button
                       variant="secondary"
+                      className="text-xs"
                       onClick={() => navigate(`/recruiter/feedback/${assignment.id}`)}
                     >
                       {assignment.status === 'briefed' ? 'Submit Feedback' : 'View Feedback'}
@@ -397,12 +437,20 @@ export default function CandidateProfile() {
                 <p className="text-xs text-slate-400 mb-3">
                   Generated {new Date(brief.generated_at).toLocaleString()}
                 </p>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     variant="secondary"
+                    className="text-xs"
                     onClick={() => navigate(`/recruiter/feedback/${assignment!.id}`)}
                   >
                     Submit Post-Interview Feedback →
+                  </Button>
+                  <Button
+                    variant="primary"
+                    className="text-xs bg-indigo-600 hover:bg-indigo-700"
+                    onClick={() => setShowPreview(true)}
+                  >
+                    👁 Preview Candidate View
                   </Button>
                   <Button
                     variant="secondary"

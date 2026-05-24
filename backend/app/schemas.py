@@ -4,6 +4,32 @@ from typing import Any
 from pydantic import BaseModel, EmailStr
 
 
+# ─── Auth / User ─────────────────────────────────────────────────────────────
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    email: str | None = None
+
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+    role: str = "recruiter"
+
+
+class UserOut(BaseModel):
+    id: int
+    email: EmailStr
+    role: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 # ─── Client ─────────────────────────────────────────────────────────────────
 
 class ClientCreate(BaseModel):
@@ -78,6 +104,10 @@ class AssignmentCreate(BaseModel):
     candidate_id: int
     client_id: int
     interview_date: datetime | None = None
+
+
+class AssignmentStatusUpdate(BaseModel):
+    status: str
 
 
 class AssignmentOut(BaseModel):
