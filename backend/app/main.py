@@ -58,16 +58,18 @@ def health_check():
 @app.post("/setup", tags=["Admin"])
 def setup_database():
     """Manually initialize the database and seed initial data. Needed for AWS Lambda."""
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
+    db = None
     try:
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
         from app.seed import seed_database
         seed_database(db)
         return {"status": "ok", "message": "Database initialized and seeded successfully."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
     finally:
-        db.close()
+        if db:
+            db.close()
 
 from mangum import Mangum
 lambda_handler = Mangum(app)
