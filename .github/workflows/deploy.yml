@@ -33,7 +33,7 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-      # Uncomment this AFTER creating the Lambda function manually in the console
+      # Uncomment this after creating the Lambda function manually in the console.
       # - name: Update Lambda to use new image
       #   run: |
       #     aws lambda update-function-code \
