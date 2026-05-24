@@ -13,7 +13,9 @@ class Settings(BaseSettings):
     FRONTEND_ENDPOINT: str = "http://localhost:5173"
     CLOUDFRONT_URL: str = ""
 
-    class Config:
-        env_file = ".env"
+    model_config = {
+        "env_file": ".env",
+        "extra": "ignore"
+    }
 
 settings = Settings()
