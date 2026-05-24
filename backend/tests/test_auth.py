@@ -2,9 +2,27 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.database import Base, engine, SessionLocal
+from app.database import Base, get_db
 from app.models import User, Candidate
 from app.auth import get_password_hash
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+# Use in-memory SQLite for testing to avoid wiping production db
+SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def override_get_db():
+    try:
+        db = TestingSessionLocal()
+        yield db
+    finally:
+        db.close()
+
+app.dependency_overrides[get_db] = override_get_db
 
 client = TestClient(app)
 
@@ -12,7 +30,17 @@ client = TestClient(app)
 def setup_db():
     Base.metadata.create_all(bind=engine)
     
-    db = SessionLocal()
+    db = TestingSessionLocal()
+    
+    # Add recruiter user
+    if not db.query(User).filter(User.email == "recruiter@staffrec.io").first():
+        user = User(
+            email="recruiter@staffrec.io",
+            hashed_password=get_password_hash("staffrec2024"),
+            role="recruiter"
+        )
+        db.add(user)
+    
     # Add a mock candidate if not exists
     if not db.query(Candidate).filter(Candidate.email == "test_candidate@example.com").first():
         cand = Candidate(
