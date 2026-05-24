@@ -4,8 +4,9 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Assignment, Brief, Candidate, Feedback
 from app.schemas import AssignmentOut, CandidateCreate, CandidateDetail, CandidateOut, CandidateUpdate
+from app.routers.auth import get_current_user
 
-router = APIRouter(prefix="/candidates", tags=["Candidates"])
+router = APIRouter(prefix="/candidates", tags=["Candidates"], dependencies=[Depends(get_current_user)])
 
 
 @router.get("", response_model=list[CandidateDetail])

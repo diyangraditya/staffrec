@@ -387,7 +387,7 @@ export default function CandidateProfile() {
                     {isEditingDate ? (
                       <div className="flex items-center gap-2 mt-2">
                         <input
-                          type="date"
+                          type="datetime-local"
                           value={editDateValue}
                           onChange={(e) => setEditDateValue(e.target.value)}
                           className="text-xs border border-slate-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
@@ -399,17 +399,17 @@ export default function CandidateProfile() {
                       <div className="flex items-center gap-2 mt-1">
                         <p className="text-xs text-slate-400">
                           {assignment.interview_date
-                            ? `Interview: ${new Date(assignment.interview_date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}`
-                            : 'No interview date set'}
+                            ? `Interview: ${new Date(assignment.interview_date).toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+                            : 'No interview schedule set'}
                         </p>
                         <button
                           onClick={() => {
-                            setEditDateValue(assignment.interview_date ? assignment.interview_date.slice(0, 10) : '')
+                            setEditDateValue(assignment.interview_date ? assignment.interview_date.slice(0, 16) : '')
                             setIsEditingDate(true)
                           }}
                           className="text-xs text-indigo-500 hover:underline"
                         >
-                          ✏️ Edit date
+                          ✏️ Edit schedule
                         </button>
                       </div>
                     )}
@@ -466,8 +466,8 @@ export default function CandidateProfile() {
                     </select>
                   </div>
                   <Input
-                    label="Interview Date (optional)"
-                    type="date"
+                    label="Interview Schedule (optional)"
+                    type="datetime-local"
                     value={interviewDate}
                     onChange={(e) => setInterviewDate(e.target.value)}
                   />

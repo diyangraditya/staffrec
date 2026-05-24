@@ -4,8 +4,9 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Assignment, Feedback
 from app.schemas import FeedbackCreate, FeedbackOut
+from app.routers.auth import get_current_user
 
-router = APIRouter(prefix="/feedback", tags=["Feedback"])
+router = APIRouter(prefix="/feedback", tags=["Feedback"], dependencies=[Depends(get_current_user)])
 
 VALID_RESULTS = {"pass", "fail"}
 

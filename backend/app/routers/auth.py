@@ -8,8 +8,12 @@ from sqlalchemy.orm import Session
 from app.auth import create_access_token, verify_password
 from app.config import settings
 from app.database import get_db
-from app.models import User
+from app.models import User, Candidate
 from app.schemas import Token, TokenData, UserOut
+from pydantic import BaseModel
+
+class CandidateLogin(BaseModel):
+    email: str
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -25,16 +29,25 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         email: str = payload.get("sub")
-        if email is None:
+        role: str = payload.get("role")
+        if email is None or role is None:
             raise credentials_exception
         token_data = TokenData(email=email)
     except JWTError:
         raise credentials_exception
 
-    user = db.query(User).filter(User.email == token_data.email).first()
-    if user is None:
+    if role == "recruiter":
+        user = db.query(User).filter(User.email == token_data.email).first()
+        if user is None:
+            raise credentials_exception
+        return {"role": "recruiter", "id": user.id, "email": user.email, "name": "Recruiter"}
+    elif role == "candidate":
+        candidate = db.query(Candidate).filter(Candidate.email == token_data.email).first()
+        if candidate is None:
+            raise credentials_exception
+        return {"role": "candidate", "id": candidate.id, "email": candidate.email, "name": candidate.name}
+    else:
         raise credentials_exception
-    return user
 
 
 @router.post("/login", response_model=Token)
@@ -50,11 +63,28 @@ def login_for_access_token(
         )
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+        data={"sub": user.email, "role": "recruiter"}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/candidate-login", response_model=Token)
+def login_for_candidate_token(
+    payload: CandidateLogin, db: Session = Depends(get_db)
+):
+    candidate = db.query(Candidate).filter(Candidate.email == payload.email).first()
+    if not candidate:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": candidate.email, "role": "candidate"}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.get("/me", response_model=UserOut)
-def read_users_me(current_user: User = Depends(get_current_user)):
+@router.get("/me")
+def read_users_me(current_user: dict = Depends(get_current_user)):
     return current_user

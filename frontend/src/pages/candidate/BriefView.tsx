@@ -95,9 +95,13 @@ export default function BriefView() {
 
             {/* Interview details card */}
             {candidate?.assignment && client && (
-              <div className="bg-indigo-600 text-white rounded-xl p-5 mb-6 shadow-md">
-                <p className="text-indigo-200 text-xs font-medium uppercase tracking-wide mb-1">
-                  Upcoming Interview
+              <div className={`text-white rounded-xl p-5 mb-6 shadow-md ${
+                candidate.assignment.status === 'interviewed' ? 'bg-slate-700' : 'bg-indigo-600'
+              }`}>
+                <p className={`${
+                  candidate.assignment.status === 'interviewed' ? 'text-slate-300' : 'text-indigo-200'
+                } text-xs font-medium uppercase tracking-wide mb-1`}>
+                  {candidate.assignment.status === 'interviewed' ? 'Completed Interview' : 'Upcoming Interview'}
                 </p>
                 <h2 className="text-xl font-bold">{client.company}</h2>
                 <div className="flex items-center gap-3 mt-3">
@@ -105,14 +109,43 @@ export default function BriefView() {
                     {client.interview_style} style
                   </span>
                   {candidate.assignment.interview_date && (
-                    <span className="text-indigo-200 text-sm">
-                      {new Date(candidate.assignment.interview_date).toLocaleDateString(
+                    <span className={`${
+                      candidate.assignment.status === 'interviewed' ? 'text-slate-300' : 'text-indigo-200'
+                    } text-sm`}>
+                      {new Date(candidate.assignment.interview_date).toLocaleString(
                         'en-US',
-                        { weekday: 'long', day: 'numeric', month: 'long' }
+                        { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }
                       )}
                     </span>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Outcome Banner */}
+            {candidate?.assignment?.status === 'interviewed' && candidate?.assignment?.feedback && (
+              <div className={`mb-6 rounded-xl p-6 border ${
+                candidate.assignment.feedback.result === 'pass' 
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-rose-50 border-rose-200 text-rose-800'
+              }`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-2xl">
+                    {candidate.assignment.feedback.result === 'pass' ? '🎉' : '📬'}
+                  </span>
+                  <h3 className="text-lg font-bold">
+                    {candidate.assignment.feedback.result === 'pass' 
+                      ? 'Congratulations! You Passed!' 
+                      : 'Update on Your Application'}
+                  </h3>
+                </div>
+                <p className={`text-sm ${
+                  candidate.assignment.feedback.result === 'pass' ? 'text-emerald-700' : 'text-rose-700'
+                }`}>
+                  {candidate.assignment.feedback.result === 'pass'
+                    ? `Great news! The team at ${client?.company} was very impressed with your interview. We will be in touch shortly regarding the next steps.`
+                    : `Thank you for taking the time to interview with ${client?.company}. Unfortunately, they have decided to move forward with other candidates at this time. We wish you the best in your job search.`}
+                </p>
               </div>
             )}
 

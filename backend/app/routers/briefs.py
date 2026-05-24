@@ -7,15 +7,16 @@ from app.config import settings
 from app.database import get_db
 from app.models import Assignment, Brief, Feedback
 from app.schemas import BriefGenerateRequest, BriefOut
+from app.routers.auth import get_current_user
 
-router = APIRouter(prefix="/briefs", tags=["Briefs"])
+router = APIRouter(prefix="/briefs", tags=["Briefs"], dependencies=[Depends(get_current_user)])
 
 
 def _build_prompt(candidate, client, past_feedbacks: list[Feedback], interview_date=None) -> str:
     from datetime import date
     today_str = date.today().strftime("%B %d, %Y")
     interview_str = (
-        interview_date.strftime("%B %d, %Y") if interview_date else "To be confirmed"
+        interview_date.strftime("%B %d, %Y at %I:%M %p") if interview_date else "To be confirmed"
     )
 
     feedback_lines = "\n".join(

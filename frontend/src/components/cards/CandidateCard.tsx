@@ -37,12 +37,11 @@ export default function CandidateCard({ candidate, clientMap }: CandidateCardPro
           </span>
           {assignment && !assignment.feedback && <StatusBadge status={assignment.status} />}
           {assignment?.feedback && (
-            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${
-              assignment.feedback.result === 'pass' 
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${assignment.feedback.result === 'pass'
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                 : 'bg-rose-50 text-rose-700 border-rose-200'
-            }`}>
-              {assignment.feedback.result === 'pass' ? '✅ Passed' : '❌ Failed'}
+              }`}>
+              {assignment.feedback.result === 'pass' ? 'Passed' : 'Failed'}
             </span>
           )}
         </div>

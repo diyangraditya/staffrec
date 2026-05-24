@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getCandidates } from '../services/candidateService'
+
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import api from '../services/api'
@@ -23,7 +23,13 @@ export default function Login() {
   const handleRoleChange = (newRole: Role) => {
     setRole(newRole)
     setError('')
-    setEmail('')
+    if (newRole === 'recruiter') {
+      setEmail('')
+      setPassword('')
+    } else {
+      setEmail('')
+      setPassword('')
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,31 +52,34 @@ export default function Login() {
 
         // Now we need to set the token for subsequent requests
         localStorage.setItem('token', token)
-        
+
         // Fetch user data
         const userRes = await api.get('/auth/me', {
           headers: { Authorization: `Bearer ${token}` }
         })
-        
+
         login(token, userRes.data)
         navigate('/recruiter/dashboard')
       } else {
-        // Candidate: look up by email
-        const candidates = await getCandidates()
-        const found = candidates.find(
-          (c) => c.email.toLowerCase() === email.toLowerCase()
-        )
-        if (!found) {
-          setError(
-            'No candidate found with that email. Try sari.dewi@example.com or aditya.rajan@example.com'
-          )
-          return
-        }
-        login('mock_candidate_token', { role: 'candidate', name: found.name, id: found.id, email: found.email })
+        // Candidate login using real auth endpoint
+        const res = await api.post('/auth/candidate-login', { email })
+        const token = res.data.access_token
+
+        localStorage.setItem('token', token)
+
+        const userRes = await api.get('/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+
+        login(token, userRes.data)
         navigate('/candidate/brief')
       }
-    } catch {
-      setError('Something went wrong. Please check your credentials.')
+    } catch (err: any) {
+      if (role === 'candidate') {
+        setError('No candidate found with that email.')
+      } else {
+        setError('Wrong username or password.')
+      }
     } finally {
       setLoading(false)
     }
@@ -89,7 +98,7 @@ export default function Login() {
               </svg>
             </div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Staffrec</h1>
-            <p className="text-slate-500 text-sm mt-1">AI-powered interview prep platform</p>
+            <p className="text-slate-500 text-sm mt-1">AI-powered interview prep platform for Staffinc</p>
           </div>
 
           {/* Role selector */}
@@ -99,11 +108,10 @@ export default function Login() {
                 key={r}
                 type="button"
                 onClick={() => handleRoleChange(r)}
-                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-sm font-medium cursor-pointer ${
-                  role === r
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                    : 'border-slate-200 text-slate-500 hover:border-slate-300'
-                }`}
+                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-sm font-medium cursor-pointer ${role === r
+                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                  : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                  }`}
               >
                 <span className="text-2xl">{r === 'recruiter' ? '🧑‍💼' : '👤'}</span>
                 <span>I'm a {r === 'recruiter' ? 'Recruiter' : 'Candidate'}</span>
@@ -179,8 +187,7 @@ export default function Login() {
 
           {role === 'candidate' && (
             <p className="text-xs text-center text-slate-400 mt-4">
-              Demo: use <code className="bg-slate-100 px-1 rounded">sari.dewi@example.com</code> (briefed) or{' '}
-              <code className="bg-slate-100 px-1 rounded">aditya.rajan@example.com</code> (pending)
+              You may sign in if you are a candidate for Staffinc and passed the HR interview.
             </p>
           )}
         </div>

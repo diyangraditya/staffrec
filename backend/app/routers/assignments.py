@@ -6,8 +6,9 @@ from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.models import Assignment, Candidate, Client, Brief, Feedback
 from app.schemas import AssignmentCreate, AssignmentDetail, AssignmentOut, AssignmentStatusUpdate
+from app.routers.auth import get_current_user
 
-router = APIRouter(prefix="/assignments", tags=["Assignments"])
+router = APIRouter(prefix="/assignments", tags=["Assignments"], dependencies=[Depends(get_current_user)])
 
 
 @router.post("", response_model=AssignmentOut, status_code=status.HTTP_201_CREATED)
