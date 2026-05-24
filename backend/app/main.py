@@ -55,5 +55,19 @@ app.include_router(analytics.router)
 def health_check():
     return {"status": "ok", "message": "Staffrec backend is running"}
 
+@app.post("/setup", tags=["Admin"])
+def setup_database():
+    """Manually initialize the database and seed initial data. Needed for AWS Lambda."""
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        from app.seed import seed_database
+        seed_database(db)
+        return {"status": "ok", "message": "Database initialized and seeded successfully."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+    finally:
+        db.close()
+
 from mangum import Mangum
 lambda_handler = Mangum(app)
