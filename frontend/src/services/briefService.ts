@@ -14,3 +14,9 @@ export const getBrief = async (assignmentId: number): Promise<Brief> => {
 export const deleteBrief = async (assignmentId: number): Promise<void> => {
   await api.delete(`/briefs/${assignmentId}`)
 }
+
+export const sendBrief = async (assignmentId: number): Promise<{ message: string }> => {
+  const res = await api.post(`/briefs/${assignmentId}/send`)
+  return res.data
+}
+

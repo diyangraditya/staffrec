@@ -80,7 +80,7 @@ export default function FeedbackForm() {
     return (
       <div className="flex min-h-screen bg-slate-50">
         <Sidebar />
-        <main className="ml-60 flex-1 flex items-center justify-center">
+        <main className="ml-0 md:ml-60 flex-1 flex items-center justify-center pt-16 md:pt-0">
           <LoadingSpinner message="Loading assignment..." />
         </main>
       </div>
@@ -94,7 +94,7 @@ export default function FeedbackForm() {
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
-      <main className="ml-60 flex-1 p-8">
+      <main className="ml-0 md:ml-60 flex-1 p-4 pt-20 md:pt-8 md:p-8">
         <div className="max-w-2xl mx-auto">
           {/* Back */}
           <button

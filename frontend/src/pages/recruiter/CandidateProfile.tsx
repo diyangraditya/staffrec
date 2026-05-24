@@ -10,7 +10,7 @@ import ConfirmDeleteModal from '../../components/modals/ConfirmDeleteModal'
 import PreviewBriefModal from '../../components/modals/PreviewBriefModal'
 import { getCandidate, updateCandidate, deleteCandidate } from '../../services/candidateService'
 import { getClients } from '../../services/clientService'
-import { generateBrief, getBrief, deleteBrief } from '../../services/briefService'
+import { generateBrief, getBrief, deleteBrief, sendBrief } from '../../services/briefService'
 import { createAssignment, updateAssignmentStatus, updateAssignmentDate, deleteAssignment } from '../../services/assignmentService'
 import { useToast } from '../../components/ui/Toast'
 import type { CandidateDetail, Client, Brief } from '../../types'
@@ -41,6 +41,7 @@ export default function CandidateProfile() {
   const [isEditing, setIsEditing] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [sendingBrief, setSendingBrief] = useState(false)
 
   // Edit form state
   const [editForm, setEditForm] = useState({
@@ -182,6 +183,19 @@ export default function CandidateProfile() {
     }
   }
 
+  const handleSendBrief = async () => {
+    if (!candidate?.assignment) return
+    setSendingBrief(true)
+    try {
+      await sendBrief(candidate.assignment.id)
+      showToast('Email sent to candidate successfully!')
+    } catch {
+      showToast('Failed to send email. Check backend logs.', 'error')
+    } finally {
+      setSendingBrief(false)
+    }
+  }
+
   const handleSaveEdit = async () => {
     if (!candidate) return
     setSaving(true)
@@ -215,7 +229,7 @@ export default function CandidateProfile() {
     return (
       <div className="flex min-h-screen bg-slate-50">
         <Sidebar />
-        <main className="ml-60 flex-1 flex items-center justify-center">
+        <main className="ml-0 md:ml-60 flex-1 flex items-center justify-center pt-16 md:pt-0">
           <LoadingSpinner message="Loading candidate profile..." />
         </main>
       </div>
@@ -248,7 +262,7 @@ export default function CandidateProfile() {
         />
       )}
 
-      <main className="ml-60 flex-1 p-8">
+      <main className="ml-0 md:ml-60 flex-1 p-4 pt-20 md:pt-8 md:p-8">
         <div className="max-w-3xl mx-auto">
           {/* Back */}
           <button
@@ -305,7 +319,7 @@ export default function CandidateProfile() {
               // Edit form
               <div className="space-y-4">
                 <h2 className="font-semibold text-slate-800">Edit Candidate</h2>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
                     label="Name"
                     value={editForm.name}
@@ -437,7 +451,7 @@ export default function CandidateProfile() {
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-sm font-medium text-slate-700 block mb-1">Assign to client</label>
                     <select
@@ -515,6 +529,14 @@ export default function CandidateProfile() {
                     onClick={() => setShowPreview(true)}
                   >
                     👁 Preview Candidate View
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                    onClick={handleSendBrief}
+                    loading={sendingBrief}
+                  >
+                    📧 Send Brief to Candidate
                   </Button>
                   <Button
                     variant="secondary"

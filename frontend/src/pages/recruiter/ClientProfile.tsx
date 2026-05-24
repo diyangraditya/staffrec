@@ -130,7 +130,7 @@ export default function ClientProfile() {
         />
       )}
 
-      <main className="ml-60 flex-1 p-8">
+      <main className="ml-0 md:ml-60 flex-1 p-4 pt-20 md:pt-8 md:p-8">
         <div className="max-w-3xl mx-auto">
           {/* Back */}
           <button
@@ -177,7 +177,7 @@ export default function ClientProfile() {
               // Edit form
               <div className="space-y-4">
                 <h2 className="font-semibold text-slate-800">Edit Client</h2>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
                     label="Contact Name"
                     value={editForm.name}

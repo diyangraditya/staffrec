@@ -1,6 +1,5 @@
 from pydantic_settings import BaseSettings
 
-
 class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./staffrec.db"
     SECRET_KEY: str
@@ -10,9 +9,10 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str = ""
     AWS_REGION: str = "us-east-1"
     BEDROCK_MODEL_ID: str = "google.gemma-3-27b-it"
+    SENDER_EMAIL: str = "recruiter@staffrec.io"
+    FRONTEND_ENDPOINT: str = "http://localhost:5173"
 
     class Config:
         env_file = ".env"
-
 
 settings = Settings()

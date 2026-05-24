@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
+from app.config import settings
 from app.database import Base, SessionLocal, engine
 from app.routers import assignments, briefs, candidates, clients, feedback, auth, analytics
 from app.seed import seed_database
@@ -29,7 +30,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[settings.FRONTEND_ENDPOINT, "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

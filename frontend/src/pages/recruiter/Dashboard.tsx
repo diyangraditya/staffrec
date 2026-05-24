@@ -84,7 +84,7 @@ export default function Dashboard() {
       )}
 
       {/* Main */}
-      <main className="ml-60 flex-1 p-8">
+      <main className="ml-0 md:ml-60 flex-1 p-4 pt-20 md:pt-8 md:p-8">
         <div className="max-w-5xl mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
@@ -104,7 +104,7 @@ export default function Dashboard() {
           {!loading && !error && (
             <>
               {/* Stats row */}
-              <div className="grid grid-cols-4 gap-4 mb-8">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
                 {stats.map((s) => (
                   <div
                     key={s.label}
@@ -117,9 +117,9 @@ export default function Dashboard() {
               </div>
 
               {/* Two-column layout */}
-              <div className="grid grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Candidate List */}
-                <div className="col-span-2">
+                <div className="col-span-1 lg:col-span-2">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex gap-4">
                       <button

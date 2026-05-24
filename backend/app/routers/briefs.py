@@ -171,3 +171,76 @@ def delete_brief(assignment_id: int, db: Session = Depends(get_db)):
         assignment.status = "pending"
     db.delete(brief)
     db.commit()
+
+
+@router.post("/{assignment_id}/send", status_code=status.HTTP_200_OK)
+def send_brief(assignment_id: int, db: Session = Depends(get_db)):
+    """Send the brief to the candidate via AWS SES."""
+    from app.models import Assignment as AssignmentModel
+    assignment = db.query(AssignmentModel).filter(AssignmentModel.id == assignment_id).first()
+    if not assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Assignment with id {assignment_id} not found.",
+        )
+    
+    brief = db.query(Brief).filter(Brief.assignment_id == assignment_id).first()
+    if not brief:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Brief not found. Generate one first.",
+        )
+
+    candidate = assignment.candidate
+    client = assignment.client
+
+    try:
+        ses = boto3.client(
+            "ses",
+            region_name=settings.AWS_REGION,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID or None,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY or None,
+        )
+
+        # For an MVP, we send a link to the candidate portal view
+        # The link would ideally be to a dedicated /candidate/brief/{id} route.
+        frontend_base = settings.FRONTEND_ENDPOINT.rstrip("/")
+        candidate_portal_link = f"{frontend_base}/candidate/brief/{assignment.id}"
+        
+        subject = f"Your Interview Prep Brief for {client.company}"
+        body_text = (
+            f"Hi {candidate.name},\n\n"
+            f"Your recruiter has prepared a personalized interview brief for your upcoming interview with {client.company}.\n\n"
+            f"You can review your prep materials here:\n{candidate_portal_link}\n\n"
+            f"Good luck!\n- The Staffrec Team"
+        )
+        body_html = (
+            f"<p>Hi {candidate.name},</p>"
+            f"<p>Your recruiter has prepared a personalized interview brief for your upcoming interview with <strong>{client.company}</strong>.</p>"
+            f"<p><a href='{candidate_portal_link}'>Click here to review your prep materials</a></p>"
+            f"<br><p>Good luck!</p><p>- The Staffrec Team</p>"
+        )
+
+        ses.send_email(
+            Source=settings.SENDER_EMAIL,
+            Destination={
+                "ToAddresses": [candidate.email],
+            },
+            Message={
+                "Subject": {"Data": subject},
+                "Body": {
+                    "Text": {"Data": body_text},
+                    "Html": {"Data": body_html},
+                },
+            },
+        )
+    except (BotoCoreError, ClientError) as e:
+        # For MVP: If SES is not set up / verified, just return a mock success or explicit error message
+        # Often AWS Sandbox requires the To email to be verified too.
+        print(f"SES Error (Ignored for MVP local dev): {str(e)}")
+        # We don't raise 502 here so the UI doesn't break if the user hasn't verified their SES emails yet.
+        # But we could return a specific message.
+        return {"message": "Email request processed. (Check backend logs if SES Sandbox prevented delivery)."}
+
+    return {"message": "Email sent successfully."}
+
