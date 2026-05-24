@@ -8,24 +8,10 @@ from app.routers import assignments, briefs, candidates, clients, feedback, auth
 from app.seed import seed_database
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup: create all tables then seed if empty
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        seed_database(db)
-    finally:
-        db.close()
-    yield
-    # Shutdown: nothing to clean up for now
-
-
 app = FastAPI(
     title="Staffrec API",
     description="AI-powered recruitment briefing platform - backend API",
     version="0.1.0",
-    lifespan=lifespan,
 )
 
 app.add_middleware(
