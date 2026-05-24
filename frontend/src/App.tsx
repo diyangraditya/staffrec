@@ -8,6 +8,7 @@ import Dashboard from './pages/recruiter/Dashboard'
 import ClientProfile from './pages/recruiter/ClientProfile'
 import CandidateProfile from './pages/recruiter/CandidateProfile'
 import FeedbackForm from './pages/recruiter/FeedbackForm'
+import Analytics from './pages/recruiter/Analytics'
 import BriefView from './pages/candidate/BriefView'
 
 export default function App() {
@@ -49,6 +50,14 @@ export default function App() {
               element={
                 <ProtectedRoute requiredRole="recruiter">
                   <FeedbackForm />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/recruiter/analytics"
+              element={
+                <ProtectedRoute requiredRole="recruiter">
+                  <Analytics />
                 </ProtectedRoute>
               }
             />

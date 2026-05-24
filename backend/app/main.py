@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.database import Base, SessionLocal, engine
-from app.routers import assignments, briefs, candidates, clients, feedback, auth
+from app.routers import assignments, briefs, candidates, clients, feedback, auth, analytics
 from app.seed import seed_database
 
 
@@ -42,6 +42,7 @@ app.include_router(candidates.router)
 app.include_router(assignments.router)
 app.include_router(briefs.router)
 app.include_router(feedback.router)
+app.include_router(analytics.router)
 
 
 @app.get("/", tags=["Health"])

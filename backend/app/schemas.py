@@ -117,6 +117,7 @@ class AssignmentOut(BaseModel):
     interview_date: datetime | None
     status: str
     created_at: datetime
+    feedback: "FeedbackOut | None" = None
 
     model_config = {"from_attributes": True}
 
@@ -165,3 +166,4 @@ class FeedbackOut(BaseModel):
 # Resolve forward references
 ClientDetail.model_rebuild()
 CandidateDetail.model_rebuild()
+AssignmentOut.model_rebuild()

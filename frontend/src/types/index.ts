@@ -37,6 +37,7 @@ export interface Assignment {
   interview_date: string | null
   status: 'pending' | 'briefed' | 'interviewed'
   created_at: string
+  feedback?: Feedback | null
 }
 
 export interface AssignmentDetail extends Assignment {

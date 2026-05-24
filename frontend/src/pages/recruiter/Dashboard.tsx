@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [showAddClient, setShowAddClient] = useState(false)
 
   const [searchQuery, setSearchQuery] = useState('')
+  const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active')
 
   const loadData = useCallback(() => {
     setLoading(true)
@@ -35,8 +36,14 @@ export default function Dashboard() {
 
   const clientMap = new Map(clients.map((c) => [c.id, c]))
 
-  // Filter candidates based on search query
+  // Filter candidates based on search query AND active tab
   const filteredCandidates = candidates.filter((c) => {
+    // 1. Tab filter
+    const isCompleted = !!c.assignment?.feedback
+    if (activeTab === 'active' && isCompleted) return false
+    if (activeTab === 'completed' && !isCompleted) return false
+
+    // 2. Search query filter
     const query = searchQuery.toLowerCase()
     return (
       c.name.toLowerCase().includes(query) ||
@@ -46,16 +53,16 @@ export default function Dashboard() {
   })
 
   // Stats
-  const total = candidates.length
-  const pending = candidates.filter((c) => c.assignment?.status === 'pending').length
-  const briefed = candidates.filter((c) => c.assignment?.status === 'briefed').length
-  const interviewed = candidates.filter((c) => c.assignment?.status === 'interviewed').length
+  const pending = candidates.filter((c) => c.assignment?.status === 'pending' && !c.assignment.feedback).length
+  const briefed = candidates.filter((c) => c.assignment?.status === 'briefed' && !c.assignment.feedback).length
+  const interviewed = candidates.filter((c) => c.assignment?.status === 'interviewed' && !c.assignment.feedback).length
+  const completed = candidates.filter((c) => !!c.assignment?.feedback).length
 
   const stats = [
-    { label: 'Total Candidates', value: total, color: 'text-slate-700' },
     { label: 'Pending Brief', value: pending, color: 'text-amber-600' },
     { label: 'Briefed', value: briefed, color: 'text-indigo-600' },
-    { label: 'Interviewed', value: interviewed, color: 'text-emerald-600' },
+    { label: 'Active Interview', value: interviewed, color: 'text-blue-600' },
+    { label: 'Completed', value: completed, color: 'text-emerald-600' },
   ]
 
   return (
@@ -113,8 +120,30 @@ export default function Dashboard() {
               <div className="grid grid-cols-3 gap-6">
                 {/* Candidate List */}
                 <div className="col-span-2">
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-base font-semibold text-slate-700">Candidate List</h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => setActiveTab('active')}
+                        className={`pb-2 text-sm font-medium border-b-2 transition-colors ${
+                          activeTab === 'active'
+                            ? 'border-indigo-600 text-indigo-600'
+                            : 'border-transparent text-slate-500 hover:text-slate-700'
+                        }`}
+                      >
+                        Active Pipeline
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('completed')}
+                        className={`pb-2 text-sm font-medium border-b-2 transition-colors ${
+                          activeTab === 'completed'
+                            ? 'border-indigo-600 text-indigo-600'
+                            : 'border-transparent text-slate-500 hover:text-slate-700'
+                        }`}
+                      >
+                        Completed Outcomes
+                      </button>
+                    </div>
+                    
                     <div className="flex items-center gap-2">
                       <div className="relative">
                         <input
