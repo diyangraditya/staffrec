@@ -11,13 +11,22 @@ from app.schemas import BriefGenerateRequest, BriefOut
 router = APIRouter(prefix="/briefs", tags=["Briefs"])
 
 
-def _build_prompt(candidate, client, past_feedbacks: list[Feedback]) -> str:
+def _build_prompt(candidate, client, past_feedbacks: list[Feedback], interview_date=None) -> str:
+    from datetime import date
+    today_str = date.today().strftime("%B %d, %Y")
+    interview_str = (
+        interview_date.strftime("%B %d, %Y") if interview_date else "To be confirmed"
+    )
+
     feedback_lines = "\n".join(
         f'- Client said: "{f.client_remarks}" | Notes: "{f.feedback_notes}"'
         for f in past_feedbacks
     ) or "No past feedback available."
 
-    return f"""CLIENT PROFILE:
+    return f"""TODAY'S DATE: {today_str}
+INTERVIEW DATE: {interview_str}
+
+CLIENT PROFILE:
 Company: {client.company}
 Interview Style: {client.interview_style}
 What they look for: {", ".join(client.expectations)}
@@ -37,6 +46,7 @@ Generate a personalized interview preparation brief with:
 4. 2 specific watch-out areas based on past feedback
 5. 3 likely interview questions with suggested approach
 
+IMPORTANT: Always use today's date ({today_str}) as the document date, and reference the interview on {interview_str}.
 Keep it concise, practical, and specific to this candidate-client pairing.
 Format using markdown with clear section headers."""
 
@@ -119,7 +129,7 @@ def generate_brief(payload: BriefGenerateRequest, db: Session = Depends(get_db))
     )
 
     # 4. Build prompt and call AI
-    prompt = _build_prompt(candidate, client, past_feedbacks)
+    prompt = _build_prompt(candidate, client, past_feedbacks, assignment.interview_date)
     brief_content = _call_bedrock(prompt)
 
     # 5. Store brief

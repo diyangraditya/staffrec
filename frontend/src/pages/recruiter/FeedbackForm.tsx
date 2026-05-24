@@ -4,7 +4,7 @@ import Sidebar from '../../components/Sidebar'
 import LoadingSpinner from '../../components/ui/LoadingSpinner'
 import Button from '../../components/ui/Button'
 import { getAssignment } from '../../services/assignmentService'
-import { submitFeedback, getFeedback } from '../../services/feedbackService'
+import { submitFeedback, getFeedback, updateFeedback } from '../../services/feedbackService'
 import { useToast } from '../../components/ui/Toast'
 import type { AssignmentDetail, Feedback } from '../../types'
 
@@ -17,6 +17,7 @@ export default function FeedbackForm() {
   const [existingFeedback, setExistingFeedback] = useState<Feedback | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [isEditingFeedback, setIsEditingFeedback] = useState(false)
 
   const [result, setResult] = useState<'pass' | 'fail' | ''>('')
   const [clientRemarks, setClientRemarks] = useState('')
@@ -46,16 +47,30 @@ export default function FeedbackForm() {
     if (!result || !assignmentId) return
     setSubmitting(true)
     try {
-      await submitFeedback({
-        assignment_id: Number(assignmentId),
-        result,
-        feedback_notes: feedbackNotes,
-        client_remarks: clientRemarks,
-      })
-      showToast('Feedback submitted successfully!')
-      navigate('/recruiter/dashboard')
+      if (existingFeedback) {
+        // Update existing feedback
+        await updateFeedback(Number(assignmentId), {
+          result,
+          feedback_notes: feedbackNotes,
+          client_remarks: clientRemarks,
+        })
+        showToast('Feedback updated successfully!')
+        setIsEditingFeedback(false)
+        // Refresh
+        const updated = await getFeedback(Number(assignmentId)).catch(() => null)
+        if (updated) setExistingFeedback(updated)
+      } else {
+        await submitFeedback({
+          assignment_id: Number(assignmentId),
+          result,
+          feedback_notes: feedbackNotes,
+          client_remarks: clientRemarks,
+        })
+        showToast('Feedback submitted successfully!')
+        navigate('/recruiter/dashboard')
+      }
     } catch {
-      showToast('Failed to submit feedback. It may have already been submitted.', 'error')
+      showToast('Failed to save feedback.', 'error')
     } finally {
       setSubmitting(false)
     }
@@ -73,7 +88,8 @@ export default function FeedbackForm() {
 
   if (!assignment) return null
 
-  const isReadOnly = !!existingFeedback
+  // Read-only when feedback exists AND not in edit mode
+  const isReadOnly = !!existingFeedback && !isEditingFeedback
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -100,9 +116,18 @@ export default function FeedbackForm() {
               {assignment.candidate.name} → {assignment.client.company}
             </p>
             {isReadOnly && (
-              <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-1.5 mt-3 inline-block">
-                Feedback already submitted — read only
-              </p>
+              <div className="flex items-center justify-between mt-3">
+                <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-1.5 inline-block">
+                  Feedback already submitted
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingFeedback(true)}
+                  className="text-xs text-indigo-600 hover:underline font-medium"
+                >
+                  ✏️ Edit feedback
+                </button>
+              </div>
             )}
           </div>
 
@@ -166,15 +191,35 @@ export default function FeedbackForm() {
             </div>
 
             {!isReadOnly && (
-              <Button
-                type="submit"
-                variant="primary"
-                loading={submitting}
-                disabled={!result}
-                className="w-full py-3 text-base"
-              >
-                Submit Feedback
-              </Button>
+              <div className="flex gap-3">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={submitting}
+                  disabled={!result}
+                  className="flex-1 py-3 text-base"
+                >
+                  {isEditingFeedback ? 'Save Changes' : 'Submit Feedback'}
+                </Button>
+                {isEditingFeedback && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="py-3"
+                    onClick={() => {
+                      setIsEditingFeedback(false)
+                      // Reset to saved values
+                      if (existingFeedback) {
+                        setResult(existingFeedback.result as 'pass' | 'fail')
+                        setClientRemarks(existingFeedback.client_remarks)
+                        setFeedbackNotes(existingFeedback.feedback_notes)
+                      }
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                )}
+              </div>
             )}
           </form>
         </div>

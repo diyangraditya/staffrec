@@ -15,3 +15,14 @@ export const getFeedback = async (assignmentId: number): Promise<Feedback> => {
   const res = await api.get(`/feedback/${assignmentId}`)
   return res.data
 }
+
+export const updateFeedback = async (
+  assignmentId: number,
+  data: { result: string; feedback_notes: string; client_remarks: string }
+): Promise<Feedback> => {
+  const res = await api.put(`/feedback/${assignmentId}`, {
+    assignment_id: assignmentId,
+    ...data,
+  })
+  return res.data
+}

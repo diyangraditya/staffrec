@@ -20,3 +20,15 @@ export const updateAssignmentStatus = async (
   const res = await api.patch(`/assignments/${id}/status`, { status })
   return res.data
 }
+
+export const updateAssignmentDate = async (
+  id: number,
+  interview_date: string | null
+): Promise<Assignment> => {
+  const res = await api.patch(`/assignments/${id}/date`, { interview_date })
+  return res.data
+}
+
+export const deleteAssignment = async (id: number): Promise<void> => {
+  await api.delete(`/assignments/${id}`)
+}

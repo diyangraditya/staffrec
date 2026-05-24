@@ -53,3 +53,27 @@ def get_feedback(assignment_id: int, db: Session = Depends(get_db)):
             detail=f"No feedback found for assignment id {assignment_id}.",
         )
     return feedback
+
+
+@router.put("/{assignment_id}", response_model=FeedbackOut)
+def update_feedback(
+    assignment_id: int, payload: FeedbackCreate, db: Session = Depends(get_db)
+):
+    """Update existing feedback for an assignment."""
+    if payload.result not in VALID_RESULTS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid result '{payload.result}'. Must be 'pass' or 'fail'.",
+        )
+    feedback = db.query(Feedback).filter(Feedback.assignment_id == assignment_id).first()
+    if not feedback:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No feedback found for assignment id {assignment_id}.",
+        )
+    feedback.result = payload.result
+    feedback.feedback_notes = payload.feedback_notes
+    feedback.client_remarks = payload.client_remarks
+    db.commit()
+    db.refresh(feedback)
+    return feedback

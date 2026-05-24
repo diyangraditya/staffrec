@@ -11,7 +11,7 @@ import PreviewBriefModal from '../../components/modals/PreviewBriefModal'
 import { getCandidate, updateCandidate, deleteCandidate } from '../../services/candidateService'
 import { getClients } from '../../services/clientService'
 import { generateBrief, getBrief, deleteBrief } from '../../services/briefService'
-import { createAssignment, updateAssignmentStatus } from '../../services/assignmentService'
+import { createAssignment, updateAssignmentStatus, updateAssignmentDate, deleteAssignment } from '../../services/assignmentService'
 import { useToast } from '../../components/ui/Toast'
 import type { CandidateDetail, Client, Brief } from '../../types'
 
@@ -34,6 +34,9 @@ export default function CandidateProfile() {
 
   const [selectedClientId, setSelectedClientId] = useState<number | ''>('')
   const [interviewDate, setInterviewDate] = useState('')
+  const [isEditingDate, setIsEditingDate] = useState(false)
+  const [editDateValue, setEditDateValue] = useState('')
+  const [deletingAssignment, setDeletingAssignment] = useState(false)
   const [error, setError] = useState('')
   const [isEditing, setIsEditing] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -109,11 +112,39 @@ export default function CandidateProfile() {
     try {
       await updateAssignmentStatus(candidate.assignment.id, newStatus)
       showToast('Assignment status updated!')
-      await fetchData() // Refresh data to get the updated status
+      await fetchData()
     } catch {
       showToast('Failed to update status.', 'error')
     } finally {
       setUpdatingStatus(false)
+    }
+  }
+
+  const handleUpdateDate = async () => {
+    if (!candidate?.assignment) return
+    try {
+      await updateAssignmentDate(candidate.assignment.id, editDateValue || null)
+      showToast('Interview date updated!')
+      setIsEditingDate(false)
+      await fetchData()
+    } catch {
+      showToast('Failed to update date.', 'error')
+    }
+  }
+
+  const handleDeleteAssignment = async () => {
+    if (!candidate?.assignment) return
+    setDeletingAssignment(true)
+    try {
+      await deleteAssignment(candidate.assignment.id)
+      showToast('Assignment removed.')
+      setBrief(null)
+      setAssignedClient(null)
+      await fetchData()
+    } catch {
+      showToast('Failed to remove assignment.', 'error')
+    } finally {
+      setDeletingAssignment(false)
     }
   }
 
@@ -330,45 +361,78 @@ export default function CandidateProfile() {
             <h2 className="text-base font-semibold text-slate-800 mb-4">Assignment</h2>
 
             {assignment ? (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-500">Assigned to</p>
-                  <p className="font-semibold text-slate-800 mt-0.5">
-                    {assignedClient?.company ?? `Client #${assignment.client_id}`}
-                  </p>
-                  {assignment.interview_date && (
-                    <p className="text-xs text-slate-400 mt-1">
-                      Interview:{' '}
-                      {new Date(assignment.interview_date).toLocaleDateString('en-US', {
-                        day: 'numeric', month: 'short', year: 'numeric',
-                      })}
+              <div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-500">Assigned to</p>
+                    <p className="font-semibold text-slate-800 mt-0.5">
+                      {assignedClient?.company ?? `Client #${assignment.client_id}`}
                     </p>
-                  )}
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <div className="flex items-center gap-2">
-                    <StatusBadge status={assignment.status} />
-                    <select
-                      value={assignment.status}
-                      onChange={(e) => handleStatusChange(e.target.value)}
-                      disabled={updatingStatus}
-                      className="text-xs border border-slate-200 rounded px-2 py-1 bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="briefed">Briefed</option>
-                      <option value="interviewed">Interviewed</option>
-                    </select>
+
+                    {/* Interview Date */}
+                    {isEditingDate ? (
+                      <div className="flex items-center gap-2 mt-2">
+                        <input
+                          type="date"
+                          value={editDateValue}
+                          onChange={(e) => setEditDateValue(e.target.value)}
+                          className="text-xs border border-slate-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                        <button onClick={handleUpdateDate} className="text-xs text-indigo-600 font-medium hover:underline">Save</button>
+                        <button onClick={() => setIsEditingDate(false)} className="text-xs text-slate-400 hover:underline">Cancel</button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs text-slate-400">
+                          {assignment.interview_date
+                            ? `Interview: ${new Date(assignment.interview_date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                            : 'No interview date set'}
+                        </p>
+                        <button
+                          onClick={() => {
+                            setEditDateValue(assignment.interview_date ? assignment.interview_date.slice(0, 10) : '')
+                            setIsEditingDate(true)
+                          }}
+                          className="text-xs text-indigo-500 hover:underline"
+                        >
+                          ✏️ Edit date
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  
-                  {(assignment.status === 'briefed' || assignment.status === 'interviewed') && (
-                    <Button
-                      variant="secondary"
-                      className="text-xs"
-                      onClick={() => navigate(`/recruiter/feedback/${assignment.id}`)}
+
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={assignment.status} />
+                      <select
+                        value={assignment.status}
+                        onChange={(e) => handleStatusChange(e.target.value)}
+                        disabled={updatingStatus}
+                        className="text-xs border border-slate-200 rounded px-2 py-1 bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="briefed">Briefed</option>
+                        <option value="interviewed">Interviewed</option>
+                      </select>
+                    </div>
+
+                    {(assignment.status === 'briefed' || assignment.status === 'interviewed') && (
+                      <Button
+                        variant="secondary"
+                        className="text-xs"
+                        onClick={() => navigate(`/recruiter/feedback/${assignment.id}`)}
+                      >
+                        {assignment.status === 'briefed' ? 'Submit Feedback' : 'View / Edit Feedback'}
+                      </Button>
+                    )}
+                    <button
+                      onClick={handleDeleteAssignment}
+                      disabled={deletingAssignment}
+                      className="text-xs text-rose-500 hover:text-rose-700 hover:underline mt-1 transition-colors"
                     >
-                      {assignment.status === 'briefed' ? 'Submit Feedback' : 'View Feedback'}
-                    </Button>
-                  )}
+                      {deletingAssignment ? 'Removing…' : '🗑 Remove assignment'}
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
