@@ -7,8 +7,9 @@ RUN pip install uv
 # Copy dependencies config
 COPY pyproject.toml .
 
-# Install dependencies into system site-packages (Lambda requires this)
-RUN uv pip install --system --no-cache $(python -c "import tomllib; d=tomllib.load(open('pyproject.toml','rb')); print(' '.join(d['project']['dependencies']))")
+# Extract dependencies and install directly into LAMBDA_TASK_ROOT
+RUN python -c "import tomllib; d=tomllib.load(open('pyproject.toml','rb')); print('\n'.join(d['project']['dependencies']))" > reqs.txt
+RUN uv pip install --system --target ${LAMBDA_TASK_ROOT} -r reqs.txt
 
 # Copy the rest of the application code
 COPY . ${LAMBDA_TASK_ROOT}
