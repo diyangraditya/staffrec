@@ -15,6 +15,18 @@ import { createAssignment, updateAssignmentStatus, updateAssignmentDate, deleteA
 import { useToast } from '../../components/ui/Toast'
 import type { CandidateDetail, Client, Brief } from '../../types'
 
+const toLocalDatetimeString = (isoString: string) => {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${y}-${m}-${day}T${h}:${min}`;
+};
+
 export default function CandidateProfile() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -95,7 +107,7 @@ export default function CandidateProfile() {
       await createAssignment({
         candidate_id: candidate.id,
         client_id: Number(selectedClientId),
-        interview_date: interviewDate || null,
+        interview_date: interviewDate ? new Date(interviewDate).toISOString() : null,
       })
       showToast('Candidate assigned successfully!')
       setLoading(true)
@@ -124,7 +136,8 @@ export default function CandidateProfile() {
   const handleUpdateDate = async () => {
     if (!candidate?.assignment) return
     try {
-      await updateAssignmentDate(candidate.assignment.id, editDateValue || null)
+      const isoDate = editDateValue ? new Date(editDateValue).toISOString() : null
+      await updateAssignmentDate(candidate.assignment.id, isoDate)
       showToast('Interview date updated!')
       setIsEditingDate(false)
       await fetchData()
@@ -404,7 +417,7 @@ export default function CandidateProfile() {
                         </p>
                         <button
                           onClick={() => {
-                            setEditDateValue(assignment.interview_date ? assignment.interview_date.slice(0, 16) : '')
+                            setEditDateValue(assignment.interview_date ? toLocalDatetimeString(assignment.interview_date) : '')
                             setIsEditingDate(true)
                           }}
                           className="text-xs text-indigo-500 hover:underline"
