@@ -60,6 +60,7 @@ def _call_bedrock(prompt: str) -> str:
             region_name=settings.AWS_REGION,
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID or None,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY or None,
+            aws_session_token=settings.AWS_SESSION_TOKEN or None,
         )
 
         system_instruction = (
@@ -201,6 +202,7 @@ def send_brief(assignment_id: int, db: Session = Depends(get_db)):
             region_name=settings.AWS_REGION,
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID or None,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY or None,
+            aws_session_token=settings.AWS_SESSION_TOKEN or None,
         )
 
         # For an MVP, we send a link to the candidate portal view

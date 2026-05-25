@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""
+    AWS_SESSION_TOKEN: str = ""
     AWS_REGION: str = "us-east-1"
     BEDROCK_MODEL_ID: str = "google.gemma-3-27b-it"
     SENDER_EMAIL: str = "recruiter@staffrec.io"
