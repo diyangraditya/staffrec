@@ -102,5 +102,3 @@ If you ever migrate or reset your GitHub repository, ensure these Repository Sec
 - **Never push `.env` files to GitHub.** They are included in `.gitignore` by default.
 - The backend uses JWT (JSON Web Tokens) for secure authentication.
 - The Production AWS Lambda function relies on an IAM Execution Role for accessing Bedrock and SES. Temporary credentials (`AWS_SESSION_TOKEN`) are securely managed automatically by `boto3`.
-
-Happy coding! ✨
